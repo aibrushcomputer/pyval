@@ -7,9 +7,12 @@ mod validator;
 mod lookup;
 mod fastpath;
 mod lazy;
+mod simd;
+mod prefetch;
 
 use validator::{EmailValidator as RustEmailValidator, ValidatedEmail as RustValidatedEmail};
 use lazy::ZeroCopyValidator;
+use simd::PortableSimd;
 
 /// Validated email result - lazy version
 #[pyclass]
@@ -110,10 +113,17 @@ fn validate_email(
         .map_err(|e| e.into())
 }
 
-/// Ultra-fast check using lookup tables
+/// Ultra-fast check using lookup tables and SIMD
 #[inline(always)]
-fn is_valid_fast(email: &str, allow_smtputf8: bool) -> bool {
-    // Try zero-allocation path first
+pub fn is_valid_fast(email: &str, allow_smtputf8: bool) -> bool {
+    // Try SIMD path for long ASCII strings
+    if email.len() >= 32 {
+        if let Some(result) = PortableSimd::validate_email_fast(email) {
+            return result;
+        }
+    }
+    
+    // Try zero-allocation path for medium strings
     if let Some(result) = fastpath::fast_ascii_email_check(email) {
         return result;
     }
@@ -124,7 +134,7 @@ fn is_valid_fast(email: &str, allow_smtputf8: bool) -> bool {
 
 /// Detailed validation with full checks
 #[inline(always)]
-fn is_valid_detailed(email: &str, allow_smtputf8: bool) -> bool {
+pub fn is_valid_detailed(email: &str, allow_smtputf8: bool) -> bool {
     let email = email.trim();
     
     if email.is_empty() {
@@ -236,9 +246,15 @@ fn is_valid_ultra(email: &str) -> bool {
 #[pyfunction]
 #[pyo3(signature = (emails, *, allow_smtputf8 = true))]
 fn batch_is_valid(emails: Vec<String>, allow_smtputf8: bool) -> Vec<bool> {
-    emails.iter()
-        .map(|e| is_valid_fast(e, allow_smtputf8))
-        .collect()
+    // Use prefetching for large batches
+    if emails.len() > 16 {
+        let email_refs: Vec<&str> = emails.iter().map(|s| s.as_str()).collect();
+        prefetch::pipelined_validation(&email_refs)
+    } else {
+        emails.iter()
+            .map(|e| is_valid_fast(e, allow_smtputf8))
+            .collect()
+    }
 }
 
 /// pyval module

@@ -1,26 +1,26 @@
 {
   "single_valid": {
     "original_ns": 100131.019,
-    "rust_ns": 794.844,
-    "speedup": 125.97568705305694,
+    "rust_ns": 854.402,
+    "speedup": 117.19427037858057,
     "target_met": true
   },
   "single_invalid": {
     "original_ns": 16803.185,
-    "rust_ns": 167.401,
-    "speedup": 100.3768496006595,
+    "rust_ns": 173.33,
+    "speedup": 96.94331621761957,
     "target_met": true
   },
   "batch_100": {
     "original_ns": 8779756.65,
-    "rust_ns": 59604.97,
-    "speedup": 147.29907002721419,
+    "rust_ns": 65727.18,
+    "speedup": 133.57878201985847,
     "target_met": true
   },
   "is_valid": {
     "original_ns": 100131.019,
-    "rust_ns": 287.045,
-    "speedup": 348.83387273772405,
+    "rust_ns": 291.734,
+    "speedup": 343.22711442615537,
     "target_met": true
   }
 }
