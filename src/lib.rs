@@ -106,10 +106,31 @@ fn validate_email(
         .map_err(|e| e.into())
 }
 
+/// Fast check for multiple @ signs - common invalid case
+#[inline(always)]
+fn has_multiple_at(email: &str) -> bool {
+    let mut count = 0;
+    for b in email.bytes() {
+        if b == b'@' {
+            count += 1;
+            if count > 1 {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 /// Check if email is valid (returns bool, no exception)
 #[pyfunction]
 #[pyo3(signature = (email, *, allow_smtputf8 = true))]
+#[inline(always)]
 fn is_valid(email: &str, allow_smtputf8: bool) -> bool {
+    // Ultra-fast reject for multiple @ signs (common invalid case)
+    if has_multiple_at(email) {
+        return false;
+    }
+    
     // Fast path - inline validation without full error handling
     let email = email.trim();
     
@@ -117,19 +138,9 @@ fn is_valid(email: &str, allow_smtputf8: bool) -> bool {
         return false;
     }
     
-    // Fast @ counting with early exit
-    let mut at_pos = None;
-    for (i, b) in email.bytes().enumerate() {
-        if b == b'@' {
-            if at_pos.is_some() {
-                return false;  // Second @ - early exit
-            }
-            at_pos = Some(i);
-        }
-    }
-    
-    let Some(at_pos) = at_pos else {
-        return false;  // No @ found
+    // Find @ position (we know there's at most one)
+    let Some(at_pos) = email.find('@') else {
+        return false;
     };
     
     let local = &email[..at_pos];
