@@ -1,29 +1,27 @@
-# pyval
+# emailval
 
-Blazingly fast email validation for Python, powered by Rust.
+Blazingly fast email validation for Python.
 
 ## Installation
 
 ```bash
-pip install pyval
+pip install emailval
 ```
 
-## Usage
+## Quick Start
 
 ```python
-from pyval import validate_email, is_valid
+from emailval import validate_email, is_valid
 
 # Fast boolean check
 if is_valid("user@example.com"):
-    print("Valid!")
+    print("Valid email!")
 
-# Full validation with details
+# Full validation
 result = validate_email("User@Example.COM")
 print(result.normalized)  # "User@example.com"
 ```
 
-## Performance
+## Documentation
 
-100-1000x faster than standard Python validators.
-
-See [GitHub](https://github.com/aibrushcomputer/pyval) for full documentation.
+Full documentation at: https://github.com/aibrushcomputer/pyval/tree/main/docs
