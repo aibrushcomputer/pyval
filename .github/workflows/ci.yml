@@ -59,22 +59,19 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
       
-      - name: Create virtualenv
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m venv .venv
-          source .venv/bin/activate
           pip install maturin pytest email-validator
       
       - name: Build pyval
         run: |
-          source .venv/bin/activate
           cd wrappers/python
-          maturin develop --release
+          maturin build --release
+          pip install target/wheels/*.whl
       
       - name: Run tests
         run: |
-          source .venv/bin/activate
           cd wrappers/python
           pytest tests/ -v
 
@@ -95,21 +92,18 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
       
-      - name: Create virtualenv
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m venv .venv
-          source .venv/bin/activate
           pip install maturin pytest email-validator
       
       - name: Build pyval
         run: |
-          source .venv/bin/activate
           cd wrappers/python
-          maturin develop --release
+          maturin build --release
+          pip install target/wheels/*.whl
       
       - name: Run performance tests
         run: |
-          source .venv/bin/activate
           cd wrappers/python
-          python tests/test_performance.py
+          pytest tests/test_performance.py -v
