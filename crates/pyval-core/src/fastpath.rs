@@ -161,7 +161,7 @@ pub fn ultra_fast_ascii_check(email: &str) -> Option<bool> {
     let bytes = email.as_bytes();
     let len = bytes.len();
 
-    if len < 3 || len > 254 {
+    if !(3..=254).contains(&len) {
         return Some(false);
     }
 

@@ -11,7 +11,7 @@ impl ZeroCopyValidator {
         let bytes = email.as_bytes();
         let len = bytes.len();
 
-        if len < 3 || len > 254 {
+        if !(3..=254).contains(&len) {
             return false;
         }
 

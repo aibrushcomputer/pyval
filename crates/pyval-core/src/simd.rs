@@ -116,7 +116,7 @@ impl SimdValidator {
         }
 
         // Check remaining
-        bytes[i..].iter().all(|&b| b < 0x80 && b >= 0x20)
+        bytes[i..].iter().all(|&b| (0x20..0x80).contains(&b))
     }
 }
 

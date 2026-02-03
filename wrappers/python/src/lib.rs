@@ -174,10 +174,8 @@ pub fn is_valid_detailed(email: &str, allow_smtputf8: bool) -> bool {
             prev_dot = true;
         } else {
             prev_dot = false;
-            if !lookup::is_valid_local_byte_fast(b) {
-                if !(allow_smtputf8 && b >= 128) {
-                    return false;
-                }
+            if !(lookup::is_valid_local_byte_fast(b) || (allow_smtputf8 && b >= 128)) {
+                return false;
             }
         }
     }

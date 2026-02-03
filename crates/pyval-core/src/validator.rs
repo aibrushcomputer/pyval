@@ -73,8 +73,8 @@ impl EmailValidator {
         let bytes = email.as_bytes();
         let mut at_pos = None;
         let mut at_count = 0;
-        for i in 0..bytes.len() {
-            if bytes[i] == b'@' {
+        for (i, &byte) in bytes.iter().enumerate() {
+            if byte == b'@' {
                 at_count += 1;
                 at_pos = Some(i);
                 if at_count > 1 {
