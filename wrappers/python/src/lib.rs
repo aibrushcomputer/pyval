@@ -1,10 +1,10 @@
 use pyo3::prelude::*;
-use pyval_core::{EmailValidator as RustEmailValidator, ValidatedEmail as RustValidatedEmail};
-use pyval_core::lazy::ZeroCopyValidator;
-use pyval_core::simd::PortableSimd;
-use pyval_core::fastpath;
-use pyval_core::lookup;
 use pyval_core::domain;
+use pyval_core::fastpath;
+use pyval_core::lazy::ZeroCopyValidator;
+use pyval_core::lookup;
+use pyval_core::simd::PortableSimd;
+use pyval_core::{EmailValidator as RustEmailValidator, ValidatedEmail as RustValidatedEmail};
 
 /// Validated email result
 #[pyclass]
@@ -42,7 +42,7 @@ impl ValidatedEmail {
     fn __repr__(&self) -> String {
         format!("ValidatedEmail('{}')", self.normalized)
     }
-    
+
     fn __str__(&self) -> String {
         self.normalized.clone()
     }
@@ -79,9 +79,10 @@ impl EmailValidator {
             },
         }
     }
-    
+
     fn validate_email(&self, email: &str) -> PyResult<ValidatedEmail> {
-        self.inner.validate(email)
+        self.inner
+            .validate(email)
             .map(ValidatedEmail::from)
             .map_err(|e| e.into())
     }
@@ -100,7 +101,8 @@ fn validate_email(
         check_deliverability,
         ..Default::default()
     };
-    validator.validate(email)
+    validator
+        .validate(email)
         .map(ValidatedEmail::from)
         .map_err(|e| e.into())
 }
@@ -114,12 +116,12 @@ pub fn is_valid_fast(email: &str, allow_smtputf8: bool) -> bool {
             return result;
         }
     }
-    
+
     // Try zero-allocation path for medium strings
     if let Some(result) = fastpath::fast_ascii_email_check(email) {
         return result;
     }
-    
+
     // Fallback to detailed validation
     is_valid_detailed(email, allow_smtputf8)
 }
@@ -128,11 +130,11 @@ pub fn is_valid_fast(email: &str, allow_smtputf8: bool) -> bool {
 #[inline(always)]
 pub fn is_valid_detailed(email: &str, allow_smtputf8: bool) -> bool {
     let email = email.trim();
-    
+
     if email.is_empty() {
         return false;
     }
-    
+
     // Fast @ counting with early exit
     let bytes = email.as_bytes();
     let mut at_pos = None;
@@ -144,24 +146,24 @@ pub fn is_valid_detailed(email: &str, allow_smtputf8: bool) -> bool {
             at_pos = Some(i);
         }
     }
-    
+
     let Some(at_pos) = at_pos else {
         return false;
     };
-    
+
     let local = &email[..at_pos];
     let domain = &email[at_pos + 1..];
-    
+
     // Fast local checks
     if local.is_empty() || local.len() > 64 {
         return false;
     }
-    
+
     let local_bytes = local.as_bytes();
     if local_bytes[0] == b'.' || local_bytes[local_bytes.len() - 1] == b'.' {
         return false;
     }
-    
+
     // Use lookup table for character validation
     let mut prev_dot = false;
     for &b in local_bytes {
@@ -179,22 +181,24 @@ pub fn is_valid_detailed(email: &str, allow_smtputf8: bool) -> bool {
             }
         }
     }
-    
+
     // Fast domain checks
     if domain.is_empty() || domain.len() > 253 {
         return false;
     }
-    
+
     if !domain.contains('.') {
         return false;
     }
-    
+
     // All-numeric check
-    let all_numeric = domain.split('.').all(|label| label.bytes().all(|b| b.is_ascii_digit()));
+    let all_numeric = domain
+        .split('.')
+        .all(|label| label.bytes().all(|b| b.is_ascii_digit()));
     if all_numeric {
         return false;
     }
-    
+
     // Fast domain validation
     if domain.is_ascii() {
         for label in domain.split('.') {
@@ -202,7 +206,7 @@ pub fn is_valid_detailed(email: &str, allow_smtputf8: bool) -> bool {
                 return false;
             }
             let bytes = label.as_bytes();
-            if bytes[0] == b'-' || bytes[bytes.len()-1] == b'-' {
+            if bytes[0] == b'-' || bytes[bytes.len() - 1] == b'-' {
                 return false;
             }
             for &b in bytes {
@@ -237,7 +241,8 @@ fn is_valid_ultra(email: &str) -> bool {
 #[pyfunction]
 #[pyo3(signature = (emails, *, allow_smtputf8 = true))]
 fn batch_is_valid(emails: Vec<String>, allow_smtputf8: bool) -> Vec<bool> {
-    emails.iter()
+    emails
+        .iter()
         .map(|e| is_valid_fast(e, allow_smtputf8))
         .collect()
 }

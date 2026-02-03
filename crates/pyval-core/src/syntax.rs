@@ -8,25 +8,25 @@ pub fn validate_local_part(local: &str, allow_smtputf8: bool) -> Result<(), Emai
     if local.is_empty() {
         return Err(EmailError::Empty);
     }
-    
+
     if local.len() > 64 {
         return Err(EmailError::LocalPartTooLong);
     }
-    
+
     // Fast byte-level checks first
     let bytes = local.as_bytes();
-    
+
     if bytes[0] == b'.' {
         return Err(EmailError::LeadingDot);
     }
-    
+
     if bytes[bytes.len() - 1] == b'.' {
         return Err(EmailError::TrailingDot);
     }
-    
+
     // Check for consecutive dots and invalid characters in one pass
     let mut prev_was_dot = false;
-    
+
     for &b in bytes {
         if b == b'.' {
             if prev_was_dot {
@@ -45,7 +45,7 @@ pub fn validate_local_part(local: &str, allow_smtputf8: bool) -> Result<(), Emai
             }
         }
     }
-    
+
     // If we have high bytes and allow_smtputf8, validate UTF-8
     if allow_smtputf8 && bytes.iter().any(|&b| b >= 128) {
         for c in local.chars() {
@@ -54,7 +54,7 @@ pub fn validate_local_part(local: &str, allow_smtputf8: bool) -> Result<(), Emai
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -76,7 +76,7 @@ fn is_valid_local_byte(b: u8, allow_smtputf8: bool) -> bool {
 #[inline]
 fn is_unsafe_unicode(c: char) -> bool {
     // Control characters, combining marks at start, etc.
-    c.is_control() || 
+    c.is_control() ||
     ('\u{200B}'..='\u{200D}').contains(&c) ||  // Zero-width chars
-    c == '\u{FEFF}'  // BOM
+    c == '\u{FEFF}' // BOM
 }

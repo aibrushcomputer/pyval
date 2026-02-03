@@ -1,5 +1,5 @@
 //! pyval-core - Core email validation library
-//! 
+//!
 //! This crate provides the core email validation logic
 //! that can be used by any language wrapper.
 
