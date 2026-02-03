@@ -490,6 +490,7 @@ name = "pyval"
 version = "0.1.0"
 dependencies = [
  "idna 1.1.0",
+ "memchr",
  "once_cell",
  "pyo3",
  "regex",
