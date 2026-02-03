@@ -3,13 +3,55 @@ name: Release
 on:
   push:
     tags:
-      - 'pyval-v*'
+      - 'v*'
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  test-before-release:
+    name: Test Before Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+      
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      
+      - name: Run clippy
+        run: cargo clippy --all -- -D warnings
+      
+      - name: Run Rust tests
+        run: cargo test --all
+      
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install maturin pytest email-validator
+      
+      - name: Build and test Python package
+        working-directory: wrappers/python
+        run: |
+          maturin build --release
+          pip install $(ls target/wheels/pyval*.whl | head -1)
+          pytest tests/ -v
+
+  build-wheels:
+    name: Build Wheels (${{ matrix.os }})
+    needs: test-before-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -27,30 +69,61 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install maturin
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
       
-      - name: Build wheels
-        working-directory: ./wrappers/python
+      - name: Install dependencies
+        run: pip install maturin
+      
+      - name: Build wheel
+        working-directory: wrappers/python
         run: maturin build --release
       
-      - name: Upload artifacts
+      - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.os }}-${{ matrix.python-version }}
+          name: wheels-${{ matrix.os }}-py${{ matrix.python-version }}
           path: wrappers/python/target/wheels/*.whl
 
-  release:
-    needs: build
+  publish-pypi:
+    name: Publish to PyPI
+    needs: [test-before-release, build-wheels]
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/pyval-v')
+    environment:
+      name: pypi
+      url: https://pypi.org/p/pyval
+    permissions:
+      id-token: write
     
     steps:
       - uses: actions/checkout@v4
       
-      - name: Download artifacts
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
+      - name: Install dependencies
+        run: pip install maturin
+      
+      - name: Build source distribution
+        working-directory: wrappers/python
+        run: maturin sdist
+      
+      - name: Publish to PyPI
+        working-directory: wrappers/python
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: maturin publish --no-interactive --token $MATURIN_PYPI_TOKEN
+
+  create-release:
+    name: Create GitHub Release
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Download all wheels
         uses: actions/download-artifact@v4
         with:
           path: wheels
@@ -61,3 +134,5 @@ jobs:
         with:
           files: wheels/**/*.whl
           generate_release_notes: true
+          draft: false
+          prerelease: false
