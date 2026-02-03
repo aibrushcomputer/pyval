@@ -247,7 +247,7 @@ fn batch_is_valid(emails: Vec<String>, allow_smtputf8: bool) -> Vec<bool> {
 
 /// pyval module
 #[pymodule]
-fn pyval(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn emailval(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<ValidatedEmail>()?;
     m.add_class::<EmailValidator>()?;
     m.add_function(wrap_pyfunction!(validate_email, m)?)?;

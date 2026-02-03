@@ -3,7 +3,7 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "pyval"
+name = "emailval"
 version = "0.2.0"
 description = "Blazingly fast email validator - 100-500x faster than alternatives"
 readme = "README.md"
@@ -42,7 +42,7 @@ Changelog = "https://github.com/aibrushcomputer/pyval/blob/main/CHANGELOG.md"
 [tool.maturin]
 features = ["pyo3/extension-module"]
 python-source = "."
-module-name = "pyval.pyval"
+module-name = "emailval.emailval"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

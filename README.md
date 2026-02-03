@@ -3,12 +3,12 @@
 **Blazingly fast email validation** — 100-1000x faster than standard Python validators, powered by Rust.
 
 [![CI](https://github.com/aibrushcomputer/pyval/actions/workflows/test.yml/badge.svg)](https://github.com/aibrushcomputer/pyval/actions/workflows/test.yml)
-[![PyPI version](https://badge.fury.io/py/pyval.svg)](https://badge.fury.io/py/pyval)
+[![PyPI version](https://badge.fury.io/py/emailval.svg)](https://badge.fury.io/py/emailval)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Performance
 
-| Operation | Speedup | Python (email-validator) | pyval (this library) |
+| Operation | Speedup | Python (email-validator) | emailval (this library) |
 |-----------|---------|--------------------------|----------------------|
 | Single valid | **125x** | 21,000 ns | 168 ns |
 | Single invalid | **98x** | 16,450 ns | 168 ns |
@@ -20,13 +20,13 @@
 ## Installation
 
 ```bash
-pip install pyval
+pip install emailval
 ```
 
 ## Quick Start
 
 ```python
-from pyval import validate_email, is_valid
+from emailval import validate_email, is_valid
 
 # Fast boolean check (454x speedup!)
 if is_valid("user@example.com"):

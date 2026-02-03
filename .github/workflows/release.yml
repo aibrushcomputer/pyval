@@ -2,15 +2,50 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
 
 permissions:
   contents: write
 
+env:
+  CACHE_TTL: 21600  # 6 hours in seconds
+
 jobs:
+  check-version:
+    name: Check Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      should_release: ${{ steps.check_tag.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for tags
+      
+      - name: Get version from pyproject.toml
+        id: get_version
+        working-directory: wrappers/python
+        run: |
+          VERSION=$(grep '^version = ' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Found version: $VERSION"
+      
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          VERSION=${{ steps.get_version.outputs.version }}
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "Tag v$VERSION already exists"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "Tag v$VERSION does not exist - will release"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
   test-before-release:
     name: Test Before Release
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,13 +55,28 @@ jobs:
         with:
           python-version: '3.12'
       
+      - name: Cache pip dependencies (6 hours)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-3.12-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-3.12-
+            ${{ runner.os }}-pip-
+      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       
-      - name: Cache cargo
+      - name: Cache cargo (6 hours)
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-cache"
+          cache-directories: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
       
       - name: Check formatting
         run: cargo fmt --all -- --check
@@ -47,13 +97,14 @@ jobs:
           cd wrappers/python
           maturin build --release
           cd ../..
-          pip install target/wheels/pyval*.whl
+          pip install target/wheels/emailval*.whl
           cd wrappers/python
           pytest tests/ -v
 
   build-wheels:
     name: Build Wheels (${{ matrix.os }}, py${{ matrix.python-version }})
-    needs: test-before-release
+    needs: [check-version, test-before-release]
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -68,11 +119,26 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       
+      - name: Cache pip dependencies (6 hours)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+            ${{ runner.os }}-pip-
+      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       
-      - name: Cache cargo
+      - name: Cache cargo (6 hours)
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust-cache"
+          cache-directories: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
       
       - name: Install dependencies
         run: pip install maturin
@@ -89,11 +155,12 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    needs: [test-before-release, build-wheels]
+    needs: [check-version, test-before-release, build-wheels]
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/pyval
+      url: https://pypi.org/p/emailval
     permissions:
       id-token: write
     
@@ -104,6 +171,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      
+      - name: Cache pip dependencies (6 hours)
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-3.12-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-3.12-
+            ${{ runner.os }}-pip-
       
       - name: Install dependencies
         run: pip install maturin
@@ -120,10 +196,13 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    needs: publish-pypi
+    needs: [check-version, publish-pypi]
+    if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       
       - name: Download all wheels
         uses: actions/download-artifact@v4
@@ -131,9 +210,19 @@ jobs:
           path: wheels
           pattern: wheels-*
       
+      - name: Create and push tag
+        run: |
+          VERSION=${{ needs.check-version.outputs.version }}
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+      
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: v${{ needs.check-version.outputs.version }}
+          name: Release v${{ needs.check-version.outputs.version }}
           files: wheels/**/*.whl
           generate_release_notes: true
           draft: false

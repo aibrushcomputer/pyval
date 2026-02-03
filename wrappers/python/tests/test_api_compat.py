@@ -12,7 +12,7 @@ def get_implementations():
     from email_validator import validate_email as py_validate
     from email_validator import EmailNotValidError
     try:
-        import pyval
+        import emailval
         return [
             ("python-email-validator", py_validate, EmailNotValidError),
             ("pyval", pyval.validate_email, ValueError),
@@ -26,7 +26,7 @@ class TestValidEmails:
     def test_valid_emails_pyval(self, email):
         """pyval should accept all valid emails."""
         try:
-            import pyval
+            import emailval
         except ImportError:
             pytest.skip("pyval not built")
         
@@ -40,7 +40,7 @@ class TestInvalidEmails:
     def test_invalid_emails_pyval(self, email):
         """pyval should reject all invalid emails."""
         try:
-            import pyval
+            import emailval
         except ImportError:
             pytest.skip("pyval not built")
         
@@ -53,7 +53,7 @@ class TestNormalization:
         """Normalization should match python-email-validator."""
         from email_validator import validate_email as py_validate
         try:
-            import pyval
+            import emailval
         except ImportError:
             pytest.skip("pyval not built")
         
@@ -73,7 +73,7 @@ class TestIsValid:
     def test_is_valid_function(self):
         """is_valid() should return bool."""
         try:
-            import pyval
+            import emailval
         except ImportError:
             pytest.skip("pyval not built")
         

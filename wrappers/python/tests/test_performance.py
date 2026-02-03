@@ -31,7 +31,7 @@ def benchmark(func, iterations=ITERATIONS):
 
 def run_comparison():
     try:
-        import pyval
+        import emailval
     except ImportError:
         print("ERROR: pyval not built. Run: maturin develop --release")
         return

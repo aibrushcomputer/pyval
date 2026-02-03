@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/aibrushcomputer/pyval"
 
 [lib]
-name = "pyval"
+name = "emailval"
 crate-type = ["cdylib"]
 
 [dependencies]
