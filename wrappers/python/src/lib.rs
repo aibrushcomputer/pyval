@@ -1,17 +1,10 @@
 use pyo3::prelude::*;
-
-mod error;
-mod syntax;
-mod domain;
-mod validator;
-mod lookup;
-mod fastpath;
-mod lazy;
-mod simd;
-
-use validator::{EmailValidator as RustEmailValidator, ValidatedEmail as RustValidatedEmail};
-use simd::PortableSimd;
-use lazy::ZeroCopyValidator;
+use pyval_core::{EmailValidator as RustEmailValidator, ValidatedEmail as RustValidatedEmail};
+use pyval_core::lazy::ZeroCopyValidator;
+use pyval_core::simd::PortableSimd;
+use pyval_core::fastpath;
+use pyval_core::lookup;
+use pyval_core::domain;
 
 /// Validated email result
 #[pyclass]
@@ -220,8 +213,7 @@ pub fn is_valid_detailed(email: &str, allow_smtputf8: bool) -> bool {
         }
         true
     } else {
-        use crate::domain::validate_domain;
-        validate_domain(domain).is_ok()
+        domain::validate_domain(domain).is_ok()
     }
 }
 

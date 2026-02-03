@@ -1,0 +1,18 @@
+[package]
+name = "pyval-python"
+version = "0.2.0"
+edition = "2021"
+description = "Python bindings for pyval - blazingly fast email validator"
+license = "MIT"
+repository = "https://github.com/aibrushcomputer/pyval"
+
+[lib]
+name = "pyval"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.23", features = ["extension-module"] }
+pyval-core = { path = "../../crates/pyval-core" }
+
+[features]
+default = []
