@@ -2,7 +2,8 @@
 """API compatibility tests against python-email-validator."""
 import pytest
 import sys
-sys.path.insert(0, '/home/aibrush/pyval/test_data')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / 'test_data'))
 
 from emails import VALID_EMAILS, INVALID_EMAILS, EDGE_CASES
 

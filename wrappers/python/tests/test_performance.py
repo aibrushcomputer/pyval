@@ -6,10 +6,10 @@ import statistics
 from pathlib import Path
 import sys
 
-sys.path.insert(0, '/home/aibrush/pyval/test_data')
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / 'test_data'))
 from emails import generate_bulk_emails, VALID_EMAILS
 
-BASELINE_FILE = Path("/home/aibrush/pyval/baseline_results.json")
+BASELINE_FILE = Path(__file__).parent.parent.parent.parent / 'baseline_results.json'
 ITERATIONS = 1000
 
 def load_baseline():
