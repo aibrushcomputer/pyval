@@ -64,13 +64,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install maturin pytest email-validator
       
-      - name: Build pyval
+      - name: Build and install pyval
         working-directory: wrappers/python
-        run: maturin build --release
-      
-      - name: Install pyval
-        run: |
-          pip install target/wheels/pyval*.whl
+        run: maturin develop --release
       
       - name: Run tests
         working-directory: wrappers/python
@@ -98,14 +94,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install maturin pytest email-validator
       
-      - name: Build pyval
+      - name: Build and install pyval
         working-directory: wrappers/python
-        run: maturin build --release
-      
-      - name: Install pyval
-        run: |
-          pip install target/wheels/pyval*.whl
+        run: maturin develop --release
       
       - name: Run performance tests
         working-directory: wrappers/python
-        run: pytest tests/test_performance.py -v
+        run: python tests/test_performance.py
