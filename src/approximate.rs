@@ -3,6 +3,7 @@
 
 /// Neural-network inspired feature extraction
 /// Uses weighted features to estimate validity
+#[allow(dead_code)]
 pub struct NeuralValidator {
     // Pre-trained weights (simplified)
     weights: [i32; 8],
@@ -68,6 +69,7 @@ impl NeuralValidator {
 
 /// Probabilistic data structure for email validation
 /// Uses multiple hashing for ultra-fast membership test
+#[allow(dead_code)]
 pub struct EmailFilter {
     // 2KB filter
     bits: [u64; 32],
@@ -147,6 +149,7 @@ impl EmailFilter {
 
 /// Run-length encoding validator
 /// Exploits patterns in valid emails
+#[allow(dead_code)]
 pub struct RleValidator;
 
 impl RleValidator {
@@ -221,6 +224,7 @@ impl RleValidator {
 }
 
 /// Adaptive validator that learns from validation history
+#[allow(dead_code)]
 pub struct AdaptiveValidator {
     neural: NeuralValidator,
     filter: EmailFilter,
@@ -285,6 +289,7 @@ pub enum ValidationMethod {
 }
 
 /// Pre-computed validation for hot paths
+#[allow(dead_code)]
 pub struct PrecomputedValidator {
     // Common email patterns pre-validated
     cache: std::collections::HashMap<String, bool>,

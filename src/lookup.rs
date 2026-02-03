@@ -50,6 +50,7 @@ pub fn is_valid_domain_byte_fast(b: u8) -> bool {
 /// Fast check for consecutive dots using bitwise operations
 /// Returns true if ".." found
 #[inline(always)]
+#[allow(dead_code)]
 pub fn has_consecutive_dots(s: &str) -> bool {
     let bytes = s.as_bytes();
     if bytes.len() < 2 {
@@ -57,17 +58,17 @@ pub fn has_consecutive_dots(s: &str) -> bool {
     }
     
     // Check 8 bytes at a time using u64
-    let mut i = 0;
-    while i + 8 <= bytes.len() {
-        let chunk = u64::from_le_bytes([
-            bytes[i], bytes[i+1], bytes[i+2], bytes[i+3],
-            bytes[i+4], bytes[i+5], bytes[i+6], bytes[i+7]
+    let mut idx = 0;
+    while idx + 8 <= bytes.len() {
+        let _chunk = u64::from_le_bytes([
+            bytes[idx], bytes[idx+1], bytes[idx+2], bytes[idx+3],
+            bytes[idx+4], bytes[idx+5], bytes[idx+6], bytes[idx+7]
         ]);
         // Magic: check for consecutive dots using bit manipulation
         // Each dot is 0x2E = 0b00101110
-        let dots = chunk ^ 0x2E2E2E2E2E2E2E2Eu64;
+        let _dots = _chunk ^ 0x2E2E2E2E2E2E2E2Eu64;
         // TODO: more sophisticated check needed
-        i += 8;
+        idx += 8;
     }
     
     // Fallback to byte-by-byte for remaining
@@ -82,6 +83,7 @@ pub fn has_consecutive_dots(s: &str) -> bool {
 /// Count @ signs quickly using SWAR (SIMD Within A Register) technique
 /// Returns (count, position_of_first)
 #[inline(always)]
+#[allow(dead_code)]
 pub fn count_at_swar(s: &str) -> (usize, Option<usize>) {
     let bytes = s.as_bytes();
     let len = bytes.len();

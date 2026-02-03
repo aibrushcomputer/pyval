@@ -18,11 +18,15 @@ pub struct ValidatedEmail {
 #[derive(Debug, Clone, Default)]
 pub struct EmailValidator {
     pub allow_smtputf8: bool,
+    #[allow(dead_code)]
     pub allow_quoted_local: bool,
+    #[allow(dead_code)]
     pub allow_domain_literal: bool,
+    #[allow(dead_code)]
     pub check_deliverability: bool,
 }
 
+#[allow(dead_code)]
 impl EmailValidator {
     pub fn new() -> Self {
         Self {

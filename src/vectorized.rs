@@ -1,15 +1,15 @@
 //! Vectorized validation - process multiple emails efficiently
 
-use crate::jit::ValidationState;
-
 /// Validate multiple emails efficiently
 #[inline]
+#[allow(dead_code)]
 pub fn validate_multiple(emails: &[&str]) -> Vec<bool> {
     emails.iter().map(|e| validate_single_fast(e)).collect()
 }
 
 /// Ultra-fast single email validation
 #[inline(always)]
+#[allow(dead_code)]
 fn validate_single_fast(email: &str) -> bool {
     let bytes = email.as_bytes();
     let len = bytes.len();
@@ -62,6 +62,7 @@ fn validate_single_fast(email: &str) -> bool {
 }
 
 /// Trie-based domain validation
+#[allow(dead_code)]
 pub struct DomainTrie {
     // Simple suffix matching for common TLDs
     tlds: Vec<&'static str>,

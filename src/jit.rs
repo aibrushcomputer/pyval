@@ -2,6 +2,7 @@
 
 /// Validation state machine for streaming validation
 #[derive(Clone, Copy)]
+#[allow(dead_code)]
 pub struct ValidationState {
     state: u8,
     at_count: u8,
@@ -73,11 +74,13 @@ impl ValidationState {
 
 /// Fast byte search using built-in methods
 #[inline(always)]
+#[allow(dead_code)]
 pub fn find_at_fast(s: &str) -> Option<usize> {
     s.find('@')
 }
 
 /// Streaming validation result
+#[allow(dead_code)]
 pub enum StreamingResult {
     Valid,
     Invalid,

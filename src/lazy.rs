@@ -5,12 +5,14 @@ use std::sync::Arc;
 /// Zero-allocation email view
 /// Holds references to original string instead of copying
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct LazyEmailView {
     original: Arc<str>,
     at_pos: usize,
     smtputf8: bool,
 }
 
+#[allow(dead_code)]
 impl LazyEmailView {
     /// Create from validated email
     #[inline]
@@ -63,10 +65,12 @@ impl LazyEmailView {
 }
 
 /// String pool for reducing allocations
+#[allow(dead_code)]
 pub struct StringPool {
     buffer: Vec<u8>,
 }
 
+#[allow(dead_code)]
 impl StringPool {
     pub fn new() -> Self {
         Self {
@@ -84,6 +88,7 @@ impl StringPool {
 
 /// Zero-copy email validator
 /// Validates without creating intermediate strings
+#[allow(dead_code)]
 pub struct ZeroCopyValidator;
 
 impl ZeroCopyValidator {
@@ -103,7 +108,7 @@ impl ZeroCopyValidator {
         let mut at_count = 0;
         let mut dot_count = 0;
         
-        for (i, &b) in bytes.iter().enumerate() {
+        for (_i, &b) in bytes.iter().enumerate() {
             state = match state {
                 ParseState::LocalStart => {
                     if b == b'.' { return false; }
@@ -182,34 +187,3 @@ enum ParseState {
     DomainDot,
 }
 
-/// Branchless validation using bitwise operations
-pub struct BranchlessValidator;
-
-impl BranchlessValidator {
-    /// Check if email is valid using minimal branches
-    #[inline]
-    pub fn is_valid_branchless(email: &str) -> bool {
-        let bytes = email.as_bytes();
-        let len = bytes.len();
-        
-        if len < 3 || len > 254 {
-            return false;
-        }
-        
-        let mut mask = 0u32;
-        let mut at_pos = 0usize;
-        
-        for (i, &b) in bytes.iter().enumerate() {
-            let is_at = (b == b'@') as u32;
-            let _is_dot = (b == b'.') as u32;
-            
-            mask |= is_at << i;
-            at_pos = if is_at == 1 { i } else { at_pos };
-        }
-        
-        // Count @ signs using popcount
-        let at_count = mask.count_ones();
-        
-        at_count == 1 && at_pos > 0 && at_pos < len - 1
-    }
-}

@@ -1,4 +1,4 @@
-//! Ultra-fast specialized validation paths
+//! Fast-path optimizations for common cases
 
 use std::sync::OnceLock;
 
@@ -14,7 +14,7 @@ fn get_common_domains() -> &'static std::collections::HashSet<&'static str> {
             "foxmail.com", "live.com", "msn.com", "aol.com",
             "proton.me", "hey.com", "fastmail.com", "gmx.com",
             "comcast.net", "verizon.net", "att.net", "me.com",
-            "mac.com", "icloud.com", "example.com", "test.com",
+            "mac.com", "example.com", "test.com",
         ]
         .iter()
         .cloned()
@@ -26,24 +26,38 @@ fn get_common_domains() -> &'static std::collections::HashSet<&'static str> {
 /// Validates without allocations or complex logic
 #[inline(always)]
 pub fn fast_ascii_email_check(email: &str) -> Option<bool> {
+    // Try ultra-fast path first for pure ASCII
+    if let Some(result) = ultra_fast_ascii_check(email) {
+        return Some(result);
+    }
+    
     // Must be ASCII and reasonable length
     if email.len() > 254 || email.len() < 3 {
         return Some(false);
     }
     
-    // Quick ASCII check - if any high bit set, not pure ASCII
+    // Quick check for @ first
     let bytes = email.as_bytes();
     
-    // Check for @ first
-    let at_pos = bytes.iter().position(|&b| b == b'@')?;
-    
     // Must have exactly one @
-    if bytes[at_pos + 1..].iter().any(|&b| b == b'@') {
+    let mut at_count = 0;
+    let mut at_pos = 0;
+    for (i, &b) in bytes.iter().enumerate() {
+        if b == b'@' {
+            at_count += 1;
+            at_pos = i;
+            if at_count > 1 {
+                return Some(false);
+            }
+        }
+    }
+    
+    if at_count != 1 {
         return Some(false);
     }
     
-    let local = &bytes[..at_pos];
-    let domain = &bytes[at_pos + 1..];
+    let local = &email[..at_pos];
+    let domain = &email[at_pos + 1..];
     
     // Fast length checks
     if local.is_empty() || local.len() > 64 {
@@ -54,30 +68,27 @@ pub fn fast_ascii_email_check(email: &str) -> Option<bool> {
     }
     
     // Must have dot in domain
-    let dot_pos = domain.iter().position(|&b| b == b'.')?;
-    if dot_pos == 0 || dot_pos == domain.len() - 1 {
+    if !domain.contains('.') {
         return Some(false);
     }
     
     // Fast local part check - only alphanumeric and common chars
-    for &b in local {
+    for &b in local.as_bytes() {
         if !is_fast_local_char(b) {
             return None; // Need full validation
         }
     }
     
     // Fast domain check
-    for &b in domain {
+    for &b in domain.as_bytes() {
         if !is_fast_domain_char(b) {
             return None; // Need full validation
         }
     }
     
     // Check for common domains (cached validation)
-    if let Ok(domain_str) = std::str::from_utf8(domain) {
-        if get_common_domains().contains(domain_str) {
-            return Some(true);
-        }
+    if get_common_domains().contains(domain) {
+        return Some(true);
     }
     
     // Valid ASCII email but not in cache - need to verify no consecutive dots, etc.
@@ -108,97 +119,57 @@ const fn is_fast_domain_char(b: u8) -> bool {
 
 /// Check for consecutive dots or leading/trailing dot
 #[inline(always)]
-fn has_dot_issues(s: &[u8]) -> bool {
+fn has_dot_issues(s: &str) -> bool {
     if s.is_empty() {
         return true;
     }
-    if s[0] == b'.' || s[s.len() - 1] == b'.' {
+    let bytes = s.as_bytes();
+    if bytes[0] == b'.' || bytes[bytes.len() - 1] == b'.' {
         return true;
     }
-    for i in 0..s.len() - 1 {
-        if s[i] == b'.' && s[i + 1] == b'.' {
+    for i in 0..bytes.len() - 1 {
+        if bytes[i] == b'.' && bytes[i + 1] == b'.' {
             return true;
         }
     }
     false
 }
 
-/// Ultra-fast validation using pointer arithmetic
-/// SAFETY: Only for ASCII strings
+/// Ultra-fast validation for ASCII strings
 #[inline(always)]
-pub unsafe fn ultra_fast_ascii_check(ptr: *const u8, len: usize) -> bool {
-    if len < 3 || len > 254 {
-        return false;
-    }
-    
-    let mut at_found = false;
-    let mut i = 0;
-    
-    while i < len {
-        let c = *ptr.add(i);
-        
-        if c == b'@' {
-            if at_found || i == 0 || i == len - 1 {
-                return false;
-            }
-            at_found = true;
-        } else if at_found {
-            // In domain part
-            if !is_fast_domain_char(c) {
-                return false;
-            }
-        } else {
-            // In local part
-            if !is_fast_local_char(c) {
-                return false;
-            }
-        }
-        
-        i += 1;
-    }
-    
-    at_found
-}
-
-/// Compile-time email validation for known patterns
-#[macro_export]
-macro_rules! static_email {
-    ($email:expr) => {{
-        const VALID: bool = const_validate_email($email);
-        VALID
-    }};
-}
-
-/// Const function for compile-time validation
-pub const fn const_validate_email(email: &str) -> bool {
+pub fn ultra_fast_ascii_check(email: &str) -> Option<bool> {
     let bytes = email.as_bytes();
+    let len = bytes.len();
     
-    if bytes.len() < 3 || bytes.len() > 254 {
-        return false;
+    if len < 3 || len > 254 {
+        return Some(false);
     }
     
-    let mut i = 0;
+    // Quick check for @
     let mut at_found = false;
+    let mut at_pos = 0;
     
-    while i < bytes.len() {
-        let c = bytes[i];
-        
-        if c == b'@' {
+    for (i, &b) in bytes.iter().enumerate() {
+        if b == b'@' {
             if at_found {
-                return false;
+                return Some(false);  // Multiple @ signs
             }
             at_found = true;
+            at_pos = i;
+        } else if b >= 128 {
+            return None;  // Non-ASCII, need full validation
         }
-        
-        i += 1;
     }
     
-    at_found
-}
-
-/// Batch validation for maximum throughput
-/// Processes multiple emails in parallel using chunks
-#[inline]
-pub fn batch_validate(emails: &[&str]) -> Vec<bool> {
-    emails.iter().map(|&e| super::is_valid(e, true)).collect()
+    if !at_found || at_pos == 0 || at_pos == len - 1 {
+        return Some(false);
+    }
+    
+    // Check domain has dot
+    let domain = &bytes[at_pos + 1..];
+    if !domain.contains(&b'.') {
+        return Some(false);
+    }
+    
+    Some(true)
 }

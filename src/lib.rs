@@ -8,15 +8,19 @@ mod lookup;
 mod fastpath;
 mod lazy;
 mod simd;
+
+#[allow(dead_code)]
 mod prefetch;
+#[allow(dead_code)]
 mod jit;
+#[allow(dead_code)]
 mod vectorized;
+#[allow(dead_code)]
 mod approximate;
 
 use validator::{EmailValidator as RustEmailValidator, ValidatedEmail as RustValidatedEmail};
-use lazy::ZeroCopyValidator;
 use simd::PortableSimd;
-use approximate::{AdaptiveValidator, EmailFilter, NeuralValidator};
+use lazy::ZeroCopyValidator;
 
 /// Validated email result - lazy version
 #[pyclass]

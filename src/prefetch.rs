@@ -2,6 +2,7 @@
 
 /// Prefetch hints for cache optimization
 #[inline(always)]
+#[allow(dead_code)]
 pub fn prefetch_read<T>(ptr: *const T) {
     #[cfg(target_arch = "x86_64")]
     unsafe {
@@ -18,6 +19,7 @@ pub fn prefetch_read<T>(ptr: *const T) {
 }
 
 /// Batch processor with prefetching
+#[allow(dead_code)]
 pub struct PrefetchBatchValidator;
 
 impl PrefetchBatchValidator {
@@ -65,11 +67,13 @@ impl PrefetchBatchValidator {
 }
 
 /// Cache-friendly string pool
+#[allow(dead_code)]
 pub struct StringPool {
     buffer: Vec<u8>,
     offsets: Vec<usize>,
 }
 
+#[allow(dead_code)]
 impl StringPool {
     pub fn new() -> Self {
         Self {
@@ -103,6 +107,7 @@ impl StringPool {
 /// Lock-free cache for validation results
 use std::sync::atomic::{AtomicU64, Ordering};
 
+#[allow(dead_code)]
 pub struct ValidationCache {
     // Simple hash table with linear probing
     buckets: Vec<AtomicU64>,
@@ -193,6 +198,7 @@ macro_rules! perfect_hash {
 /// Software pipelining for batch validation
 /// Overlaps multiple validations to hide latency
 #[inline]
+#[allow(dead_code)]
 pub fn pipelined_validation(emails: &[&str]) -> Vec<bool> {
     let len = emails.len();
     let mut results = vec![false; len];
@@ -205,11 +211,10 @@ pub fn pipelined_validation(emails: &[&str]) -> Vec<bool> {
     }
     
     // Unroll loop with software pipelining
-    let mut r0 = super::is_valid_fast(emails[0], true);
-    let mut r1 = super::is_valid_fast(emails[1], true);
-    let mut r2 = super::is_valid_fast(emails[2], true);
+    let mut r1 = crate::is_valid_fast(emails[1], true);
+    let mut r2 = crate::is_valid_fast(emails[2], true);
     
-    results[0] = r0;
+    results[0] = crate::is_valid_fast(emails[0], true);
     
     for i in 3..len {
         // Start next validation
@@ -219,7 +224,6 @@ pub fn pipelined_validation(emails: &[&str]) -> Vec<bool> {
         results[i - 2] = r1;
         
         // Rotate
-        r0 = r1;
         r1 = r2;
         r2 = r3;
     }
