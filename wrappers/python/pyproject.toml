@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "emailval"
-version = "0.2.0"
+version = "0.2.1"
 description = "Blazingly fast email validator - 100-500x faster than alternatives"
 readme = "README.md"
 license = {text = "MIT"}

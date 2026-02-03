@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.1] - 2025-02-03
+
+### Changed
+- Completely rewritten all documentation
+- New structured docs/ folder
+- Clean, concise README.md
+- Complete API reference
+- Architecture documentation
+- Contributing guidelines
+
 ## [0.2.0] - 2025-02-03
 
 ### Added
