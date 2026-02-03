@@ -1,101 +1,13 @@
-//! Lazy email validation - minimal allocations
-
-use std::sync::Arc;
-
-/// Zero-allocation email view
-/// Holds references to original string instead of copying
-#[derive(Clone)]
-#[allow(dead_code)]
-pub struct LazyEmailView {
-    original: Arc<str>,
-    at_pos: usize,
-    smtputf8: bool,
-}
-
-#[allow(dead_code)]
-impl LazyEmailView {
-    /// Create from validated email
-    #[inline]
-    pub fn new(original: String, at_pos: usize, smtputf8: bool) -> Self {
-        Self {
-            original: original.into(),
-            at_pos,
-            smtputf8,
-        }
-    }
-    
-    /// Get local part (lazy - no allocation)
-    #[inline]
-    pub fn local_part(&self) -> &str {
-        &self.original[..self.at_pos]
-    }
-    
-    /// Get domain (lazy - no allocation)
-    #[inline]
-    pub fn domain(&self) -> &str {
-        &self.original[self.at_pos + 1..]
-    }
-    
-    /// Get normalized form (computed on demand)
-    #[inline]
-    pub fn normalized(&self) -> String {
-        format!("{}@{}", 
-            self.local_part().to_lowercase(),
-            self.domain().to_lowercase()
-        )
-    }
-    
-    /// Get ASCII domain (computed on demand)
-    #[inline]
-    pub fn ascii_domain(&self) -> String {
-        self.domain().to_lowercase()
-    }
-    
-    /// Get original
-    #[inline]
-    pub fn original(&self) -> &str {
-        &self.original
-    }
-    
-    /// Check if SMTPUTF8 needed
-    #[inline]
-    pub fn smtputf8(&self) -> bool {
-        self.smtputf8
-    }
-}
-
-/// String pool for reducing allocations
-#[allow(dead_code)]
-pub struct StringPool {
-    buffer: Vec<u8>,
-}
-
-#[allow(dead_code)]
-impl StringPool {
-    pub fn new() -> Self {
-        Self {
-            buffer: Vec::with_capacity(1024),
-        }
-    }
-    
-    /// Get a string from the pool
-    pub fn get_string(&mut self, capacity: usize) -> String {
-        self.buffer.clear();
-        self.buffer.reserve(capacity);
-        String::from_utf8(std::mem::take(&mut self.buffer)).unwrap()
-    }
-}
+//! Zero-copy email validation - no heap allocations
 
 /// Zero-copy email validator
 /// Validates without creating intermediate strings
-#[allow(dead_code)]
 pub struct ZeroCopyValidator;
 
 impl ZeroCopyValidator {
     /// Validate email without any allocations
     #[inline]
     pub fn validate_no_alloc(email: &str) -> bool {
-        // Direct byte manipulation
         let bytes = email.as_bytes();
         let len = bytes.len();
         
@@ -103,12 +15,11 @@ impl ZeroCopyValidator {
             return false;
         }
         
-        // Single pass validation
         let mut state = ParseState::LocalStart;
         let mut at_count = 0;
         let mut dot_count = 0;
         
-        for (_i, &b) in bytes.iter().enumerate() {
+        for &b in bytes.iter() {
             state = match state {
                 ParseState::LocalStart => {
                     if b == b'.' { return false; }
@@ -158,7 +69,6 @@ impl ZeroCopyValidator {
             };
         }
         
-        // Final validation
         matches!(state, ParseState::Domain) && at_count == 1 && dot_count >= 1
     }
     
@@ -186,4 +96,3 @@ enum ParseState {
     Domain,
     DomainDot,
 }
-

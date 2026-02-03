@@ -9,20 +9,11 @@ mod fastpath;
 mod lazy;
 mod simd;
 
-#[allow(dead_code)]
-mod prefetch;
-#[allow(dead_code)]
-mod jit;
-#[allow(dead_code)]
-mod vectorized;
-#[allow(dead_code)]
-mod approximate;
-
 use validator::{EmailValidator as RustEmailValidator, ValidatedEmail as RustValidatedEmail};
 use simd::PortableSimd;
 use lazy::ZeroCopyValidator;
 
-/// Validated email result - lazy version
+/// Validated email result
 #[pyclass]
 #[derive(Clone)]
 struct ValidatedEmail {
@@ -254,15 +245,9 @@ fn is_valid_ultra(email: &str) -> bool {
 #[pyfunction]
 #[pyo3(signature = (emails, *, allow_smtputf8 = true))]
 fn batch_is_valid(emails: Vec<String>, allow_smtputf8: bool) -> Vec<bool> {
-    // Use prefetching for large batches
-    if emails.len() > 16 {
-        let email_refs: Vec<&str> = emails.iter().map(|s| s.as_str()).collect();
-        prefetch::pipelined_validation(&email_refs)
-    } else {
-        emails.iter()
-            .map(|e| is_valid_fast(e, allow_smtputf8))
-            .collect()
-    }
+    emails.iter()
+        .map(|e| is_valid_fast(e, allow_smtputf8))
+        .collect()
 }
 
 /// pyval module
