@@ -130,7 +130,8 @@ def run_comparison():
         print("      ~13ns for validation to reach 100x (target: 168ns total).")
     
     # Save results
-    with open("/home/aibrush/pyval/performance_results.json", "w") as f:
+    results_file = Path(__file__).parent.parent.parent.parent / 'performance_results.json'
+    with open(results_file, "w") as f:
         json.dump(results, f, indent=2)
     
     return results
