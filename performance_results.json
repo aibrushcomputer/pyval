@@ -1,0 +1,26 @@
+{
+  "single_valid": {
+    "original_ns": 100131.019,
+    "rust_ns": 810.176,
+    "speedup": 123.5916874851884,
+    "target_met": true
+  },
+  "single_invalid": {
+    "original_ns": 16803.185,
+    "rust_ns": 179.379,
+    "speedup": 93.67420378082163,
+    "target_met": false
+  },
+  "batch_100": {
+    "original_ns": 8779756.65,
+    "rust_ns": 66788.13,
+    "speedup": 131.4568419567968,
+    "target_met": true
+  },
+  "is_valid": {
+    "original_ns": 100131.019,
+    "rust_ns": 299.259,
+    "speedup": 334.59651672965555,
+    "target_met": true
+  }
+}
