@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Performance benchmarks comparing pyval vs python-email-validator."""
+"""Performance benchmarks comparing emailval vs python-email-validator."""
 import time
 import json
 import statistics
@@ -33,7 +33,7 @@ def run_comparison():
     try:
         import emailval
     except ImportError:
-        print("ERROR: pyval not built. Run: maturin develop --release")
+        print("ERROR: emailval not built. Run: maturin develop --release")
         return
     
     baseline = load_baseline()
@@ -43,7 +43,7 @@ def run_comparison():
     test_email = "user.name+tag@example.com"
     print(f"\nBenchmarking single email: {test_email}")
     
-    rust_result = benchmark(lambda: pyval.validate_email(test_email, check_deliverability=False))
+    rust_result = benchmark(lambda: emailval.validate_email(test_email, check_deliverability=False))
     orig = baseline.get("single_valid", {})
     
     if orig:
@@ -61,7 +61,7 @@ def run_comparison():
     # Note: 100x here is physically challenging due to Python FFI overhead (~155ns)
     # Target: 168ns, but Python call overhead alone is ~155ns, leaving only ~13ns for validation
     invalid_email = "invalid@@email"
-    rust_result = benchmark(lambda: pyval.is_valid(invalid_email))
+    rust_result = benchmark(lambda: emailval.is_valid(invalid_email))
     orig = baseline.get("single_invalid", {})
     
     if orig:
@@ -82,7 +82,7 @@ def run_comparison():
     def validate_batch():
         for email in bulk_emails[:100]:
             try:
-                pyval.validate_email(email, check_deliverability=False)
+                emailval.validate_email(email, check_deliverability=False)
             except ValueError:
                 pass
     
@@ -101,7 +101,7 @@ def run_comparison():
     
     # is_valid() function (fastest path)
     print("\nBenchmarking is_valid() function:")
-    rust_result = benchmark(lambda: pyval.is_valid(test_email))
+    rust_result = benchmark(lambda: emailval.is_valid(test_email))
     if orig:
         speedup = baseline["single_valid"]["mean_ns"] / rust_result["mean_ns"]
         results["is_valid"] = {

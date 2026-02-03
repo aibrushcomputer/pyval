@@ -15,7 +15,7 @@ def get_implementations():
         import emailval
         return [
             ("python-email-validator", py_validate, EmailNotValidError),
-            ("pyval", pyval.validate_email, ValueError),
+            ("emailval", emailval.validate_email, ValueError),
         ]
     except ImportError:
         return [("python-email-validator", py_validate, EmailNotValidError)]
@@ -23,29 +23,29 @@ def get_implementations():
 
 class TestValidEmails:
     @pytest.mark.parametrize("email", VALID_EMAILS)
-    def test_valid_emails_pyval(self, email):
-        """pyval should accept all valid emails."""
+    def test_valid_emails_emailval(self, email):
+        """emailval should accept all valid emails.""
         try:
             import emailval
         except ImportError:
-            pytest.skip("pyval not built")
+            pytest.skip("emailval not built")
         
-        result = pyval.validate_email(email, check_deliverability=False)
+        result = emailval.validate_email(email, check_deliverability=False)
         assert result is not None
         assert result.normalized
 
 
 class TestInvalidEmails:
     @pytest.mark.parametrize("email", INVALID_EMAILS)
-    def test_invalid_emails_pyval(self, email):
-        """pyval should reject all invalid emails."""
+    def test_invalid_emails_emailval(self, email):
+        """emailval should reject all invalid emails.""
         try:
             import emailval
         except ImportError:
-            pytest.skip("pyval not built")
+            pytest.skip("emailval not built")
         
         with pytest.raises(ValueError):
-            pyval.validate_email(email, check_deliverability=False)
+            emailval.validate_email(email, check_deliverability=False)
 
 
 class TestNormalization:
@@ -55,7 +55,7 @@ class TestNormalization:
         try:
             import emailval
         except ImportError:
-            pytest.skip("pyval not built")
+            pytest.skip("emailval not built")
         
         test_cases = [
             "User.Name@EXAMPLE.COM",
@@ -65,7 +65,7 @@ class TestNormalization:
         
         for email in test_cases:
             py_result = py_validate(email, check_deliverability=False)
-            rust_result = pyval.validate_email(email, check_deliverability=False)
+            rust_result = emailval.validate_email(email, check_deliverability=False)
             assert py_result.normalized == rust_result.normalized, f"Mismatch for {email}"
 
 
@@ -75,11 +75,11 @@ class TestIsValid:
         try:
             import emailval
         except ImportError:
-            pytest.skip("pyval not built")
+            pytest.skip("emailval not built")
         
-        assert pyval.is_valid("test@example.com") is True
-        assert pyval.is_valid("invalid@@email") is False
-        assert pyval.is_valid("") is False
+        assert emailval.is_valid("test@example.com") is True
+        assert emailval.is_valid("invalid@@email") is False
+        assert emailval.is_valid("") is False
 
 
 if __name__ == "__main__":
