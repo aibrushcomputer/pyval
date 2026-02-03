@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / 'test_data')
 
 from emails import VALID_EMAILS, INVALID_EMAILS, EDGE_CASES
 
+
 def get_implementations():
     """Return both implementations for comparison."""
     from email_validator import validate_email as py_validate
@@ -24,7 +25,7 @@ def get_implementations():
 class TestValidEmails:
     @pytest.mark.parametrize("email", VALID_EMAILS)
     def test_valid_emails_emailval(self, email):
-        """emailval should accept all valid emails.""
+        """emailval should accept all valid emails."""
         try:
             import emailval
         except ImportError:
@@ -38,7 +39,7 @@ class TestValidEmails:
 class TestInvalidEmails:
     @pytest.mark.parametrize("email", INVALID_EMAILS)
     def test_invalid_emails_emailval(self, email):
-        """emailval should reject all invalid emails.""
+        """emailval should reject all invalid emails."""
         try:
             import emailval
         except ImportError:
