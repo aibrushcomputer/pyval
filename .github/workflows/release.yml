@@ -43,14 +43,16 @@ jobs:
           pip install maturin pytest email-validator
       
       - name: Build and test Python package
-        working-directory: wrappers/python
         run: |
+          cd wrappers/python
           maturin build --release
-          pip install $(ls target/wheels/pyval*.whl | head -1)
+          cd ../..
+          pip install target/wheels/pyval*.whl
+          cd wrappers/python
           pytest tests/ -v
 
   build-wheels:
-    name: Build Wheels (${{ matrix.os }})
+    name: Build Wheels (${{ matrix.os }}, py${{ matrix.python-version }})
     needs: test-before-release
     runs-on: ${{ matrix.os }}
     strategy:
@@ -83,7 +85,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}-py${{ matrix.python-version }}
-          path: wrappers/python/target/wheels/*.whl
+          path: target/wheels/*.whl
 
   publish-pypi:
     name: Publish to PyPI
