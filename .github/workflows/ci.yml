@@ -16,6 +16,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -39,7 +44,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
     steps:
       - uses: actions/checkout@v4
       
@@ -93,19 +98,6 @@ jobs:
         working-directory: wrappers/python
         run: maturin develop --release
       
-      - name: Run baseline benchmark
-        run: |
-          pip install email-validator
-          python baseline_benchmark.py
-      
       - name: Run performance tests
         working-directory: wrappers/python
         run: python tests/test_performance.py
-      
-      - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
-        with:
-          name: benchmark-results
-          path: |
-            baseline_results.json
-            performance_results.json
