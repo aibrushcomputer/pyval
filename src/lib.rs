@@ -4,10 +4,14 @@ mod error;
 mod syntax;
 mod domain;
 mod validator;
+mod lookup;
+mod fastpath;
+mod lazy;
 
 use validator::{EmailValidator as RustEmailValidator, ValidatedEmail as RustValidatedEmail};
+use lazy::ZeroCopyValidator;
 
-/// Validated email result
+/// Validated email result - lazy version
 #[pyclass]
 #[derive(Clone)]
 struct ValidatedEmail {
@@ -106,40 +110,40 @@ fn validate_email(
         .map_err(|e| e.into())
 }
 
-/// Fast check for multiple @ signs - common invalid case
+/// Ultra-fast check using lookup tables
 #[inline(always)]
-fn has_multiple_at(email: &str) -> bool {
-    let mut count = 0;
-    for b in email.bytes() {
-        if b == b'@' {
-            count += 1;
-            if count > 1 {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-/// Check if email is valid (returns bool, no exception)
-#[pyfunction]
-#[pyo3(signature = (email, *, allow_smtputf8 = true))]
-#[inline(always)]
-fn is_valid(email: &str, allow_smtputf8: bool) -> bool {
-    // Ultra-fast reject for multiple @ signs (common invalid case)
-    if has_multiple_at(email) {
-        return false;
+fn is_valid_fast(email: &str, allow_smtputf8: bool) -> bool {
+    // Try zero-allocation path first
+    if let Some(result) = fastpath::fast_ascii_email_check(email) {
+        return result;
     }
     
-    // Fast path - inline validation without full error handling
+    // Fallback to detailed validation
+    is_valid_detailed(email, allow_smtputf8)
+}
+
+/// Detailed validation with full checks
+#[inline(always)]
+fn is_valid_detailed(email: &str, allow_smtputf8: bool) -> bool {
     let email = email.trim();
     
     if email.is_empty() {
         return false;
     }
     
-    // Find @ position (we know there's at most one)
-    let Some(at_pos) = email.find('@') else {
+    // Fast @ counting with early exit
+    let bytes = email.as_bytes();
+    let mut at_pos = None;
+    for (i, &b) in bytes.iter().enumerate() {
+        if b == b'@' {
+            if at_pos.is_some() {
+                return false;
+            }
+            at_pos = Some(i);
+        }
+    }
+    
+    let Some(at_pos) = at_pos else {
         return false;
     };
     
@@ -156,7 +160,7 @@ fn is_valid(email: &str, allow_smtputf8: bool) -> bool {
         return false;
     }
     
-    // Check for consecutive dots and invalid chars
+    // Use lookup table for character validation
     let mut prev_dot = false;
     for &b in local_bytes {
         if b == b'.' {
@@ -166,13 +170,10 @@ fn is_valid(email: &str, allow_smtputf8: bool) -> bool {
             prev_dot = true;
         } else {
             prev_dot = false;
-            // Fast byte-level check
-            match b {
-                b'a'..=b'z' | b'A'..=b'Z' | b'0'..=b'9' => {}
-                b'!' | b'#' | b'$' | b'%' | b'&' | b'\'' | b'*' | b'+' | b'-' | b'/' => {}
-                b'=' | b'?' | b'^' | b'_' | b'`' | b'{' | b'|' | b'}' | b'~' => {}
-                128..=255 if allow_smtputf8 => {}
-                _ => return false,
+            if !lookup::is_valid_local_byte_fast(b) {
+                if !(allow_smtputf8 && b >= 128) {
+                    return false;
+                }
             }
         }
     }
@@ -182,20 +183,18 @@ fn is_valid(email: &str, allow_smtputf8: bool) -> bool {
         return false;
     }
     
-    // Check for at least one dot
     if !domain.contains('.') {
         return false;
     }
     
-    // All-numeric check (invalid IP-like)
+    // All-numeric check
     let all_numeric = domain.split('.').all(|label| label.bytes().all(|b| b.is_ascii_digit()));
     if all_numeric {
         return false;
     }
     
-    // Fast domain validation - skip IDNA for ASCII-only domains
+    // Fast domain validation
     if domain.is_ascii() {
-        // Fast path: validate ASCII domain without IDNA conversion
         for label in domain.split('.') {
             if label.is_empty() || label.len() > 63 {
                 return false;
@@ -205,17 +204,41 @@ fn is_valid(email: &str, allow_smtputf8: bool) -> bool {
                 return false;
             }
             for &b in bytes {
-                if !b.is_ascii_alphanumeric() && b != b'-' {
+                if !lookup::is_valid_domain_byte_fast(b) {
                     return false;
                 }
             }
         }
         true
     } else {
-        // Domain validation with IDNA for non-ASCII
         use crate::domain::validate_domain;
         validate_domain(domain).is_ok()
     }
+}
+
+/// Check if email is valid (returns bool, no exception)
+#[pyfunction]
+#[pyo3(signature = (email, *, allow_smtputf8 = true))]
+#[inline(always)]
+fn is_valid(email: &str, allow_smtputf8: bool) -> bool {
+    is_valid_fast(email, allow_smtputf8)
+}
+
+/// Ultra-fast is_valid using zero-copy validation
+#[pyfunction]
+#[pyo3(signature = (email, *))]
+#[inline(always)]
+fn is_valid_ultra(email: &str) -> bool {
+    ZeroCopyValidator::validate_no_alloc(email)
+}
+
+/// Batch validate multiple emails (for high throughput)
+#[pyfunction]
+#[pyo3(signature = (emails, *, allow_smtputf8 = true))]
+fn batch_is_valid(emails: Vec<String>, allow_smtputf8: bool) -> Vec<bool> {
+    emails.iter()
+        .map(|e| is_valid_fast(e, allow_smtputf8))
+        .collect()
 }
 
 /// pyval module
@@ -225,6 +248,8 @@ fn pyval(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<EmailValidator>()?;
     m.add_function(wrap_pyfunction!(validate_email, m)?)?;
     m.add_function(wrap_pyfunction!(is_valid, m)?)?;
-    m.add("__version__", "0.1.0")?;
+    m.add_function(wrap_pyfunction!(is_valid_ultra, m)?)?;
+    m.add_function(wrap_pyfunction!(batch_is_valid, m)?)?;
+    m.add("__version__", "0.2.0")?;
     Ok(())
 }
