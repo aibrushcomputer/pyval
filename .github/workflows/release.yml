@@ -116,7 +116,7 @@ jobs:
         working-directory: wrappers/python
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
-        run: maturin publish --no-interactive --token $MATURIN_PYPI_TOKEN
+        run: maturin publish --non-interactive --token $MATURIN_PYPI_TOKEN
 
   create-release:
     name: Create GitHub Release
