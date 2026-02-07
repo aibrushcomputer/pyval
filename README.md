@@ -1,3 +1,7 @@
+---
+# ⚠️ This repository has been moved to be under the AiBrush Organization. Please use the code from here [pyval](https://github.com/AiBrush/pyval) ⚠️
+---
+
 # emailval
 
 Blazingly fast email validation for Python, powered by Rust.
